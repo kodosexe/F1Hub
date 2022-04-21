@@ -1,0 +1,124 @@
+<head>
+    <!-- If you'd like to support IE8 (for Video.js versions prior to v7) -->
+    <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
+    <link href="https://vjs.zencdn.net/7.18.1/video-js.css" rel="stylesheet" />
+    <link href="./node_modules/@samueleastdev/videojs-dash-hls-bitrate-switcher/dist/videojs-dash-hls-bitrate-switcher.css" />
+    
+</head>
+  
+  <body onload="onLoadHandler()">
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        #video-id {
+            min-width: 100vh;
+            min-height: 100vh;
+        }
+        .moveContainer {
+            background-color: white;
+            text-align: center;
+        }
+    </style>
+    <div id="videoContainer">
+        <video-js id="my-video" class="video-js vjs-16-9" controls preload="auto"></video-js>
+        
+
+        <div id="moveContainer" class="moveContainer">
+            <img class="uiElement" id="close" src="./misc/close.png" onclick="window.close()"/>
+            <img class="uiElement" id="dragger" src="./misc/moveImg.png"/>
+        </div>
+    </div>
+  
+    <script src="./node_modules/video.js/dist/video.min.js"></script>
+    <script src="./node_modules/@samueleastdev/videojs-dash-hls-bitrate-switcher/dist/videojs-dash-hls-bitrate-switcher.min.js"></script>
+    <script src="./node_modules/videojs-contrib-eme/dist/videojs-contrib-eme.js"></script>
+
+
+    <style>
+        body {
+            background-color: black;
+        }
+        .moveContainer {
+            
+            background-color: black;
+        }
+        .uiElement{
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        //require('@silvermine/videojs-quality-selector/dist/css/quality-selector.css')
+        if (window.isElectron) {
+            console.log("Electron Connected");
+        } else {
+            console.log("Electron not connected");
+        }
+
+        var player;
+        var options = {
+            controlBar: {
+                children:[
+                    'playToggle',
+                    'progressControl',
+                    'volumePanel',
+                    'qualitySelector',
+                    'fullscreenToggle',
+                ],
+            },
+            
+        };
+        function onLoadHandler() {
+            console.log('here prev init');
+            var player = videojs('my-video', {
+                plugins: {
+                    dashHlsBitrateSwitcher: {
+                        support: "both",
+                    },
+                },
+            });
+            player.eme();
+            console.log("here post init");
+
+            // Data: src
+            window.ipcRenderer.on('playSrcHls', (event, data) => {
+                console.log("Trying to play: " + data);
+                player.src({
+                    src: data,
+                    type: 'application/x-mpegURL',
+                    label: '1080P',
+                    selected: true,
+                });
+                player.play();
+            });
+
+            // Data[0]: src; Data[1]: license
+            window.ipcRenderer.on('playSrcDrm', (event, data) => {
+                console.log(data[1]);
+                player.src({
+                    src: data[0],
+                    type: 'application/dash+xml',
+                    keySystems: {
+                        'com.widevine.alpha': {
+                            getCertificate: function(emeOptions, callback) {
+                                return data[1];
+                            },
+                        }
+                    }
+                });
+            });
+
+        }
+
+
+    </script>
+
+
+    
+  </body>

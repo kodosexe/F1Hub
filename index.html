@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>F1Hub</title>
+        <link href="./styles.css" rel="stylesheet">
+        <script type="text/javascript"
+            src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js">
+        </script>
+        
+    </head>
+    <body>
+        <div class="sidebar left" id="sidebar">
+
+            <!-- Start Login form -->
+            <div class="sidebarElement welcome" id="welcome">Welcome</div>
+            <div class="form loginPrompt" id="loginDiv">
+                <form id="loginform">
+                    <button class="sidebarButton">Log In</button><img id="loading" class="loading" src="./misc/loading.gif" height="30px">
+                </form>
+            </div>
+
+            <div class="sidebarElement form playByContentID">
+                <form id="playbyid">
+                    <label for="id">Content ID:</label><br>
+                    <input type="text" id="id" name="id" class="sidebarTextInput"><br>
+                    <input type="submit" value="Load Event" class="sidebarButton">
+                </form>
+            </div>
+            <div class="bottom">
+                <button id="close" class="sidebarButton sidebarElement">Close</button>
+            </div>
+            
+        </div>
+        <div class="selector" id="selector">
+                <div class="selectorContainer">
+                    <div onclick="nodeClicked('live')" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement live" id="live">LIVE<img class="liveIndicator" src="./misc/liveIndicator.gif" width="40px" height="40px"><span class="arrow">⟶</span></div><br>
+                    <div onclick="nodeClicked(4319)" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement">2022 Season<span class="arrow">⟶</span></div><br>
+                    <div onclick="nodeClicked(493)" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement">Archive<span class="arrow">⟶</span></div><br>
+                    <div onclick="nodeClicked(410)" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement">Shows<span class="arrow">⟶</span></div><br>
+                    <div onclick="nodeClicked(413)" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement">Documentaries<span class="arrow">⟶</span></div>
+                    <div class="fade"></div>
+                </div>
+            
+                 
+        </div>
+        
+        <div class="sidebar right" id="sidebar">
+
+            <div class="sidebarElement">
+                Select a Stream
+            </div>
+
+            <div class="streamSelector d-table">
+                <ol id="streamList">
+                </ol>
+                <fade/>
+            </div>
+            
+            <div class="bottom">
+                <button id="pauseAll" class="sidebarButton sidebarElement">Pause</button>
+                <button id="closeAll" class="sidebarButton sidebarElement">Close All</button>
+            </div>
+            
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+        <script src="./renderer.js" type="text/javascript"></script>
+        <script>
+            if (window.isElectron) {
+                const electron = require('electron');
+                const { ipcRenderer, ipcMain, net } = require("electron");
+                console.log("electron connected")
+                window.ipcRenderer.on('liveDetected', (event, data) => {document.getElementById("live").style.display = "inline"});
+                window.ipcRenderer.on('loginStart', (event, data) => {console.log("logging in");document.getElementById("loading").style.display = "inline"});
+                window.ipcRenderer.on('loginSuccess', (event, data) => {
+                    console.log("Logged in");
+                    document.getElementById("loginDiv").style.display = "none";
+                    document.getElementById("welcome").innerHTML = "Welcome, " + data;
+                    document.getElementById("welcome").style.display = "inline-block";
+                    document.getElementById("logOut").disabled = false;
+                    document.getElementById("loading").style.display = "none";
+                });
+                window.ipcRenderer.on('loggedOutSuccess', (event, date) => {
+                    console.log("Logged Out");
+                    document.getElementById("welcome").style.display = "none";
+                    document.getElementById("loginDiv").style.display = "inline";
+                    document.getElementById("logOut").disabled = true;
+                });
+
+                //Assuming data[0] is the displayname and data[1] index in main.js -> channelOptions;
+                window.ipcRenderer.on('streamAppend', (event, data) => {
+                    var appendTo = document.getElementById("streamList");
+                    var toAppend = document.createElement('li');
+                    toAppend.innerHTML = '<li><div class="streamElement">' + data[0] + '<button class="playbutton" onclick="playClicked(' + data[1] + ')">Play</button></div></li>';
+                    appendTo.appendChild(toAppend);
+                });
+
+                // Data is an array of names and indexes
+                /*
+                 * data = [{'name': name, 'id': i}, {'name':name2, 'id': n}]
+                */
+                window.ipcRenderer.on('newTab', (event, data) => {
+                    var appendTo = document.getElementById("selector");
+                    var toAppend = document.createElement("div");
+                    toAppend.setAttribute("class", "selectorContainer");
+                    
+                    var inner = '<div onclick=back() class="selElement">⟵</div></br>';
+
+                    for (var i = 0; i < data.length; i++) {
+                        inner += '<div onclick="nodeClicked(' + data[i].id + ')" onmouseout="undispArrow(this)" onmouseover="dispArrow(this)" class="selElement">' + data[i].name + '<span class="arrow">⟶</span></div></br>';
+                    }
+                    inner += '<div class="fade"></div>';
+
+                    toAppend.innerHTML = inner;
+                    appendTo.appendChild(toAppend);
+                    fadeAllButLast();
+                    collapseAllButLast();
+                });
+
+                window.ipcRenderer.on('clearStreams', (event, data) => {
+                    console.log("Clearing..")
+                    document.getElementById("streamList").innerHTML = "";
+                });
+
+                function back() {
+                    var selectorElement = document.getElementById("selector");
+                    selectorElement.removeChild(selectorElement.lastChild);
+                    fadeAllButLast();
+                    collapseAllButLast();
+                }
+
+                function playClicked(index) {
+                    ipcRenderer.send("playLoadedStream", index);
+                }
+            } else {
+                console.log("NO ELECTRON CONNECTION")
+            }
+            
+            function nodeClicked(id) {
+                ipcRenderer.send('nodeClicked', id);
+            }
+
+            function collapseAllButLast() {
+                var child = document.getElementById("selector").children;
+                var amountChildren = child.length;
+                child[amountChildren-1].setAttribute("style", "width: fit-content");
+
+                if(child[amountChildren-2].style.width === "fit-content") {
+                    var w = child[amountChildren-2].clientWidth;
+                    child[amountChildren-2].setAttribute("style", "width: " + w/2 + "px");
+                }
+            }
+
+            function fadeAllButLast() {
+                var child = document.getElementById("selector").children;
+                for(var i = 0; i<child.length-1; i++) {
+                    child[i].children[child[i].children.length-1].setAttribute("style", "display: block");
+                }
+                child[child.length-1].children[child[child.length-1].children.length-1].setAttribute("style", "display: none");
+            }
+        </script>
+    </body>
+</html>

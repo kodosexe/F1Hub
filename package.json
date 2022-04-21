@@ -1,0 +1,25 @@
+{
+  "name": "f1hub",
+  "version": "0.0.1a",
+  "description": "F1TV Viewing Client",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "author": "kodos",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^18.0.1",
+    "video.js": "^7.18.1"
+  },
+  "dependencies": {
+    "@samueleastdev/videojs-dash-hls-bitrate-switcher": "^1.0.7",
+    "dash.js": "^3.0.1",
+    "electron-browserify-fs": "^0.0.2",
+    "electron-drag": "^2.0.0",
+    "hls.js": "^1.1.5",
+    "videojs-contrib-eme": "^4.0.0",
+    "videojs-contrib-quality-levels": "^2.1.0"
+  }
+}
